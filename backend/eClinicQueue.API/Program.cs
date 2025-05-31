@@ -1,8 +1,12 @@
+using eClinicQueue.Data.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddDataLayer(builder.Configuration);
 
 var app = builder.Build();
 

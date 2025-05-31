@@ -1,5 +1,5 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+﻿/.vs/eClinicQueue
 
-/.vs/eClinicQueue
+bin/
+obj/
+/packages/
