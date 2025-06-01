@@ -1,9 +1,8 @@
-﻿namespace eClinicQueue.Data.Models.Enums
+﻿namespace eClinicQueue.Data.Models.Enums;
+
+public enum UserRole
 {
-    public enum UserRole
-    {
-        Patient,
-        Doctor,
-        Administrator,
-    }
+    Patient,
+    Doctor,
+    Administrator,
 }

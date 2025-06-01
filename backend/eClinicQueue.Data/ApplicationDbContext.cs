@@ -56,6 +56,12 @@ public class ApplicationDbContext : DbContext
             .WithMany()
             .HasForeignKey(s => s.DoctorId)
             .OnDelete(DeleteBehavior.Restrict);
+            
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     public DbSet<User> Users { get; set; }
@@ -64,4 +70,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<TimeSlot> TimeSlots { get; set; }
     public DbSet<Appointment> Appointments { get; set; }
     public DbSet<Statistics> Statistics { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 }

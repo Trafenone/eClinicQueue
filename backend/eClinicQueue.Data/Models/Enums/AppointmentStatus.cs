@@ -1,10 +1,9 @@
-﻿namespace eClinicQueue.Data.Models.Enums
+﻿namespace eClinicQueue.Data.Models.Enums;
+
+public enum AppointmentStatus
 {
-    public enum AppointmentStatus
-    {
-        Scheduled,
-        InProgress,
-        Completed,
-        Canceled
-    }
+    Scheduled,
+    InProgress,
+    Completed,
+    Canceled
 }
