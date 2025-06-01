@@ -1,4 +1,5 @@
-﻿using eClinicQueue.Data.Models;
+﻿using eClinicQueue.Data.Configurations;
+using eClinicQueue.Data.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace eClinicQueue.Data;
@@ -13,6 +14,9 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfiguration(new UserConfiguration());
+        modelBuilder.ApplyConfiguration(new RoleConfiguration());
 
         // Configure relationships
         modelBuilder.Entity<Patient>()
@@ -65,6 +69,7 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<Role> Roles { get; set; }
     public DbSet<Patient> Patients { get; set; }
     public DbSet<DoctorProfile> DoctorProfiles { get; set; }
     public DbSet<TimeSlot> TimeSlots { get; set; }

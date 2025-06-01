@@ -24,7 +24,7 @@ public static class AdminUserSeed
                 FirstName = "System",
                 LastName = "Administrator",
                 PhoneNumber = string.Empty,
-                Role = UserRole.Administrator,
+                RoleId = 2,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
