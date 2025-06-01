@@ -52,48 +52,122 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
+    public async Task<AuthResponseDto> LoginByPhoneAsync(PhoneLoginDto loginDto)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.PhoneNumber == loginDto.PhoneNumber);
+
+        if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
         {
-            throw new InvalidOperationException("User with this email already exists");
+            throw new UnauthorizedAccessException("Invalid credentials");
         }
 
-        var user = new User()
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException("Account is disabled");
+        }
+
+        if (user.Role != UserRole.Patient)
+        {
+            throw new UnauthorizedAccessException("Only patients can log in using phone number");
+        }
+
+        var token = GenerateJwtToken(user);
+        var refreshToken = await GenerateRefreshTokenAsync(user);
+
+        return new AuthResponseDto
+        {
+            Token = token,
+            RefreshToken = refreshToken.Token,
+            Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
+            UserRole = user.Role.ToString(),
+            UserId = user.Id.ToString()
+        };
+    }
+
+    public async Task<AuthResponseDto> RegisterPatientAsync(PatientRegisterDto registerDto)
+    {
+        var existingUser = await _context.Users
+            .Where(u => u.Email == registerDto.Email || u.PhoneNumber == registerDto.PhoneNumber)
+            .FirstOrDefaultAsync();
+        
+        if (existingUser != null)
+        {
+            throw new InvalidOperationException("Email or phone already taken");
+        }
+
+        var user = new User
         {
             Id = Guid.NewGuid(),
             Email = registerDto.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
-            PhoneNumber = registerDto.PhoneNumber ?? string.Empty,
-            Role = Enum.TryParse<UserRole>(registerDto.Role, true, out var role) ? role : UserRole.Patient,
+            PhoneNumber = registerDto.PhoneNumber,
+            Role = UserRole.Patient,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         await _context.Users.AddAsync(user);
 
-        if (registerDto.Role == "Patient" && registerDto.DateOfBirth.HasValue)
+        var patient = new Patient
         {
-            var patient = new Patient
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                DateOfBirth = registerDto.DateOfBirth.Value
-            };
-            await _context.Patients.AddAsync(patient);
-        }
-        else if (registerDto.Role == "Doctor")
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            DateOfBirth = registerDto.DateOfBirth,
+            MedicalRecordNumber = registerDto.MedicalRecordNumber
+        };
+        
+        await _context.Patients.AddAsync(patient);
+        await _context.SaveChangesAsync();
+
+        var token = GenerateJwtToken(user);
+        var refreshToken = await GenerateRefreshTokenAsync(user);
+
+        return new AuthResponseDto
         {
-            var doctor = new DoctorProfile
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id
-            };
-            await _context.DoctorProfiles.AddAsync(doctor);
+            Token = token,
+            RefreshToken = refreshToken.Token,
+            Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
+            UserRole = user.Role.ToString(),
+            UserId = user.Id.ToString()
+        };
+    }
+
+    public async Task<AuthResponseDto> RegisterDoctorAsync(DoctorRegisterDto registerDto)
+    {
+        var existingUser = await _context.Users
+            .Where(u => u.Email == registerDto.Email || u.PhoneNumber == registerDto.PhoneNumber)
+            .FirstOrDefaultAsync();
+
+        if (existingUser != null)
+        {
+            throw new InvalidOperationException("Email or phone already taken");
         }
 
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = registerDto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
+            FirstName = registerDto.FirstName,
+            LastName = registerDto.LastName,
+            PhoneNumber = registerDto.PhoneNumber,
+            Role = UserRole.Doctor,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+
+        await _context.Users.AddAsync(user);
+
+        var doctor = new DoctorProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Specialization = registerDto.Specialization ?? new List<string>()
+        };
+        
+        await _context.DoctorProfiles.AddAsync(doctor);
         await _context.SaveChangesAsync();
 
         var token = GenerateJwtToken(user);
@@ -176,6 +250,7 @@ public class AuthService : IAuthService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.MobilePhone, user.PhoneNumber),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
         };
