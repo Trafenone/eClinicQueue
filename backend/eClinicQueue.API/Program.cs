@@ -2,6 +2,7 @@ using eClinicQueue.API.Configurations;
 using eClinicQueue.API.Services.Implementations;
 using eClinicQueue.API.Services.Interfaces;
 using eClinicQueue.Data.Extensions;
+using eClinicQueue.Data.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -81,6 +82,13 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDataLayer(builder.Configuration);
 
 var app = builder.Build();
+
+// Seed database with admin user
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await AdminUserSeed.SeedAdminUser(services);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

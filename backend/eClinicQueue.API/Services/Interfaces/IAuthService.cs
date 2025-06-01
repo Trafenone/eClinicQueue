@@ -6,7 +6,9 @@ namespace eClinicQueue.API.Services.Interfaces;
 public interface IAuthService
 {
     Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
-    Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto);
+    Task<AuthResponseDto> LoginByPhoneAsync(PhoneLoginDto loginDto);
+    Task<AuthResponseDto> RegisterPatientAsync(PatientRegisterDto registerDto);
+    Task<AuthResponseDto> RegisterDoctorAsync(DoctorRegisterDto registerDto);
     Task<AuthResponseDto> RefreshTokenAsync(TokenRequestDto tokenRequest);
     string GenerateJwtToken(User user);
     Task<RefreshToken> GenerateRefreshTokenAsync(User user);

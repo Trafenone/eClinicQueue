@@ -17,12 +17,12 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto registerDto)
+    [HttpPost("register/patient")]
+    public async Task<ActionResult<AuthResponseDto>> RegisterPatient([FromBody] PatientRegisterDto registerDto)
     {
         try
         {
-            var result = await _authService.RegisterAsync(registerDto);
+            var result = await _authService.RegisterPatientAsync(registerDto);
             return Ok(result);
         }
         catch (InvalidOperationException ex)
@@ -31,7 +31,26 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "An error occurred during registration" });
+            return StatusCode(500, new { message = "An error occurred during patient registration" });
+        }
+    }
+
+    [Authorize(Roles = "Administrator")]
+    [HttpPost("register/doctor")]
+    public async Task<ActionResult<AuthResponseDto>> RegisterDoctor([FromBody] DoctorRegisterDto registerDto)
+    {
+        try
+        {
+            var result = await _authService.RegisterDoctorAsync(registerDto);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "An error occurred during doctor registration" });
         }
     }
 
@@ -41,6 +60,24 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _authService.LoginAsync(loginDto);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "An error occurred during login" });
+        }
+    }
+
+    [HttpPost("login/phone")]
+    public async Task<ActionResult<AuthResponseDto>> LoginByPhone([FromBody] PhoneLoginDto loginDto)
+    {
+        try
+        {
+            var result = await _authService.LoginByPhoneAsync(loginDto);
             return Ok(result);
         }
         catch (UnauthorizedAccessException ex)
