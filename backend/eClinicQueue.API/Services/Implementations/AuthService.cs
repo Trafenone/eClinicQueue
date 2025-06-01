@@ -1,9 +1,9 @@
 ﻿using eClinicQueue.API.Configurations;
 using eClinicQueue.API.Dtos.Auth;
+using eClinicQueue.API.Enums;
 using eClinicQueue.API.Services.Interfaces;
 using eClinicQueue.Data;
 using eClinicQueue.Data.Models;
-using eClinicQueue.Data.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -47,7 +47,7 @@ public class AuthService : IAuthService
             Token = token,
             RefreshToken = refreshToken.Token,
             Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
-            UserRole = user.Role.ToString(),
+            UserRole = user.Role.Name.ToString(),
             UserId = user.Id.ToString()
         };
     }
@@ -66,7 +66,7 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Account is disabled");
         }
 
-        if (user.Role != UserRole.Patient)
+        if (user.RoleId != (int)RoleType.Patient)
         {
             throw new UnauthorizedAccessException("Only patients can log in using phone number");
         }
@@ -79,17 +79,14 @@ public class AuthService : IAuthService
             Token = token,
             RefreshToken = refreshToken.Token,
             Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
-            UserRole = user.Role.ToString(),
+            UserRole = user.Role.Name.ToString(),
             UserId = user.Id.ToString()
         };
     }
 
     public async Task<AuthResponseDto> RegisterPatientAsync(PatientRegisterDto registerDto)
     {
-        var existingUser = await _context.Users
-            .Where(u => u.Email == registerDto.Email || u.PhoneNumber == registerDto.PhoneNumber)
-            .FirstOrDefaultAsync();
-        
+        var existingUser = await FindExistingUserByIdentifiersAsync(registerDto.Email, registerDto.PhoneNumber);
         if (existingUser != null)
         {
             throw new InvalidOperationException("Email or phone already taken");
@@ -103,7 +100,7 @@ public class AuthService : IAuthService
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
             PhoneNumber = registerDto.PhoneNumber,
-            Role = UserRole.Patient,
+            RoleId = (int)RoleType.Patient,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -117,7 +114,7 @@ public class AuthService : IAuthService
             DateOfBirth = registerDto.DateOfBirth,
             MedicalRecordNumber = registerDto.MedicalRecordNumber
         };
-        
+
         await _context.Patients.AddAsync(patient);
         await _context.SaveChangesAsync();
 
@@ -129,17 +126,14 @@ public class AuthService : IAuthService
             Token = token,
             RefreshToken = refreshToken.Token,
             Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
-            UserRole = user.Role.ToString(),
+            UserRole = ((RoleType)user.RoleId).ToString(),
             UserId = user.Id.ToString()
         };
     }
 
     public async Task<AuthResponseDto> RegisterDoctorAsync(DoctorRegisterDto registerDto)
     {
-        var existingUser = await _context.Users
-            .Where(u => u.Email == registerDto.Email || u.PhoneNumber == registerDto.PhoneNumber)
-            .FirstOrDefaultAsync();
-
+        var existingUser = await FindExistingUserByIdentifiersAsync(registerDto.Email, registerDto.PhoneNumber);
         if (existingUser != null)
         {
             throw new InvalidOperationException("Email or phone already taken");
@@ -153,7 +147,7 @@ public class AuthService : IAuthService
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
             PhoneNumber = registerDto.PhoneNumber,
-            Role = UserRole.Doctor,
+            RoleId = (int)RoleType.Doctor,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -166,7 +160,7 @@ public class AuthService : IAuthService
             UserId = user.Id,
             Specialization = registerDto.Specialization ?? new List<string>()
         };
-        
+
         await _context.DoctorProfiles.AddAsync(doctor);
         await _context.SaveChangesAsync();
 
@@ -178,7 +172,7 @@ public class AuthService : IAuthService
             Token = token,
             RefreshToken = refreshToken.Token,
             Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
-            UserRole = user.Role.ToString(),
+            UserRole = ((RoleType)user.RoleId).ToString(),
             UserId = user.Id.ToString()
         };
     }
@@ -237,7 +231,7 @@ public class AuthService : IAuthService
             Token = newJwtToken,
             RefreshToken = newRefreshToken.Token,
             Expiration = DateTime.UtcNow.AddMinutes(_jwtConfig.ExpirationMinutes),
-            UserRole = user.Role.ToString(),
+            UserRole = user.Role.Name.ToString(),
             UserId = user.Id.ToString()
         };
     }
@@ -249,9 +243,9 @@ public class AuthService : IAuthService
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.MobilePhone, user.PhoneNumber),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+            new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? string.Empty),
+            new Claim(ClaimTypes.Role, ((RoleType)user.RoleId).ToString()),
             new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
         };
 
@@ -310,6 +304,23 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
 
         return true;
+    }
+
+    private async Task<User?> FindExistingUserByIdentifiersAsync(string? email, string? phoneNumber)
+    {
+        var query = _context.Users.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            query = query.Where(u => u.Email == email);
+        }
+
+        if (!string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            query = query.Where(u => u.PhoneNumber == phoneNumber);
+        }
+
+        return await query.FirstOrDefaultAsync();
     }
 
     private ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
