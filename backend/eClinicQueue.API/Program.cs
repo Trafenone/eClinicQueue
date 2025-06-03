@@ -1,17 +1,44 @@
 using eClinicQueue.API.Configurations;
-using eClinicQueue.API.Services.Implementations;
-using eClinicQueue.API.Services.Interfaces;
+using eClinicQueue.API.Core.Interfaces;
+using eClinicQueue.API.Core.Services;
+using eClinicQueue.API.Middleware;
 using eClinicQueue.Data.Extensions;
 using eClinicQueue.Data.Seed;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
+});
 
 // Configure JWT
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection(JwtConfig.SectionName));
@@ -48,6 +75,9 @@ if (jwtConfig != null)
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Register HTTP Client
+builder.Services.AddHttpClient();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -83,11 +113,22 @@ builder.Services.AddDataLayer(builder.Configuration);
 
 var app = builder.Build();
 
+// Use custom exception handling middleware
+app.UseGlobalExceptionHandler();
+
 // Seed database with admin user
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await AdminUserSeed.SeedAdminUser(services);
+    try
+    {
+        Log.Information("Seeding admin user");
+        await AdminUserSeed.SeedAdminUser(services);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred during database seeding");
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -97,7 +138,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Enable CORS
+app.UseCors("AllowSpecificOrigin");
+
 app.UseHttpsRedirection();
+
+// Request logging middleware
+app.UseSerilogRequestLogging();
 
 // Add authentication middleware
 app.UseAuthentication();
@@ -105,4 +152,16 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+try
+{
+    Log.Information("Starting eClinicQueue API");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

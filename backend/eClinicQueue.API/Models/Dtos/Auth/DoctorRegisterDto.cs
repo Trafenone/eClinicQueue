@@ -1,21 +1,20 @@
-﻿namespace eClinicQueue.API.Dtos.Auth;
+namespace eClinicQueue.API.Models.Dtos.Auth;
 
-public class RegisterDto
+public class DoctorRegisterDto
 {
-    public RegisterDto()
+    public DoctorRegisterDto()
     {
         Email = string.Empty;
         Password = string.Empty;
         FirstName = string.Empty;
         LastName = string.Empty;
-        Role = string.Empty;
+        PhoneNumber = string.Empty;
     }
 
     public string Email { get; set; }
     public string Password { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public string? PhoneNumber { get; set; }
-    public string Role { get; set; }
-    public DateTime? DateOfBirth { get; set; }
+    public string PhoneNumber { get; set; }
+    public List<string>? Specialization { get; set; }
 }

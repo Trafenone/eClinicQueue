@@ -1,7 +1,7 @@
 ﻿using eClinicQueue.API.Configurations;
-using eClinicQueue.API.Dtos.Auth;
-using eClinicQueue.API.Enums;
-using eClinicQueue.API.Services.Interfaces;
+using eClinicQueue.API.Core.Interfaces;
+using eClinicQueue.API.Models.Dtos.Auth;
+using eClinicQueue.API.Models.Enums;
 using eClinicQueue.Data;
 using eClinicQueue.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +12,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace eClinicQueue.API.Services.Implementations;
+namespace eClinicQueue.API.Core.Services;
 
 public class AuthService : IAuthService
 {

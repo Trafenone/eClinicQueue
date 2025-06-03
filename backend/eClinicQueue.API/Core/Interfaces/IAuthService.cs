@@ -1,7 +1,7 @@
-﻿using eClinicQueue.API.Dtos.Auth;
+﻿using eClinicQueue.API.Models.Dtos.Auth;
 using eClinicQueue.Data.Models;
 
-namespace eClinicQueue.API.Services.Interfaces;
+namespace eClinicQueue.API.Core.Interfaces;
 
 public interface IAuthService
 {

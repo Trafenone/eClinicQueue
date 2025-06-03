@@ -1,4 +1,4 @@
-namespace eClinicQueue.API.Dtos.Auth;
+namespace eClinicQueue.API.Models.Dtos.Auth;
 
 public class PatientRegisterDto
 {

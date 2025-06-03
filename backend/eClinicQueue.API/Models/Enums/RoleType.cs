@@ -1,4 +1,4 @@
-﻿namespace eClinicQueue.API.Enums;
+﻿namespace eClinicQueue.API.Models.Enums;
 
 public enum RoleType
 {

@@ -1,5 +1,4 @@
 using eClinicQueue.Data.Models;
-using eClinicQueue.Data.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,7 +23,7 @@ public static class AdminUserSeed
                 FirstName = "System",
                 LastName = "Administrator",
                 PhoneNumber = string.Empty,
-                RoleId = 2,
+                RoleId = 3,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
